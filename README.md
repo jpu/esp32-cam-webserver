@@ -82,6 +82,7 @@ To make a permanent config with your home wifi settings, different defaults or a
 
 ### Programming 
 
+#### Using Arduino
 Assuming you are using the latest Espressif Arduino core the `ESP32 Dev Module` board will appear in the ESP32 Arduino section of the boards list. Select this (do not use the `AI-THINKER` entry listed in the boiards menu, it is not OTA compatible, and will caus the module to crash and reboot rather than updating if you use it.
 ![IDE board config](Docs/ota-board-selection.png)
 
@@ -96,6 +97,41 @@ Once you have the initial upload done and the board is connected to the wifi net
 If you have a status LED configured it will give a double flash when it begins attempting to conenct to WiFi, and five short flashes once it has succeeded. It will also flash briefly when you access the camera to change settings.
 
 Go to the URL given in the serial output, the web UI should appear with the settings panel open. Click away!
+
+#### Using PlatformIO
+
+There's two environments available in the included platformio.ini:
+```ini
+[env:esp32cam]
+platform = espressif32
+board = esp32cam
+board_build.partitions = default.csv
+framework = arduino
+
+[env:esp32cam_ota]
+extends = env:esp32cam
+upload_protocol = espota
+upload_port = ${sysenv.ESP32CAM_OTA_HOST}
+upload_flags =
+  --auth=${sysenv.ESP32CAM_OTA_PASS}
+```
+
+##### Serial
+
+The ```[env:esp32cam]``` env assumes a serial connection. You can follow the Arduino instructions above.
+
+##### OTA
+
+The ```[env:esp32cam_ota]``` env is for an OTA upload. Define the ESP32CAM_OTA_HOST and ESP32CAM_OTA_PASS environment variables on your computer:
+
+```bash
+$ export ESP32CAM_OTA_HOST='your_esp32cam_http_address_here'
+```
+
+```bash
+$ export ESP32CAM_OTA_PASS='your_esp32cam_ota_password_here'
+```
+Then, select the ```[env:esp32cam_ota]``` environment in the PlatformIO toolbar and hit the Upload button.
 
 ## My Modifications:
 
@@ -116,6 +152,36 @@ I would also like to shoutout to @jmfloyd; who suggested rotating the image in t
 ![The stream viewer](Docs/streamview.png)<br>*Standalone StreamViewer; No decoration or controls, the image is resizable, and you can doubleclick it for fullscreen*
 
 ![The info page](Docs/infodump.png)<br>*Boring Details*
+
+### Raw sensor crop
+
+To crop the image on the sensor, make a request like 
+
+```
+GET /control?var=res_raw&val=1&offset_x=254&offset_y=250&total_x=960&total_y=256&raw_width=512&raw_height=128
+```
+
+Note: There's currently an offset bug in the Arduino ESP32 camera library, making it only possible to use offsets 0..254. But it's already fixed in the official esp32-camera library, and will trickle down to the Arduino ESP32 library in time:
+
+https://github.com/espressif/esp32-camera/pull/298
+
+### HTML view crop
+
+TODO
+
+Until this is done, you can define these two CSS classes in Chrome dev tools, for example:
+
+```css
+figure #stream-crop {
+  overflow: hidden;
+  margin-right: calc( -100 / 70 * 100%);
+}
+
+figure img#stream {
+  width: 100%;
+  margin-left: -70%;
+}
+```
 
 ## Notes:
 
