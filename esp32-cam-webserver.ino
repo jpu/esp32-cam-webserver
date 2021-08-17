@@ -7,6 +7,8 @@
 #include "src/parsebytes.h"
 #include "time.h"
 
+// #include <ESPAsyncWebServer.h>
+#include <WebSocketsServer.h>
 
 /* This sketch is a extension/expansion/reork of the 'official' ESP32 Camera example
  *  sketch from Expressif:
@@ -73,6 +75,9 @@ IPAddress gw;
 // Declare external function from app_httpd.cpp
 extern void startCameraServer(int hPort, int sPort);
 extern void serialDump();
+WebSocketsServer webSocket = WebSocketsServer(1337);
+char msg_buf[10];
+int testVarState = 0;
 
 // A Name for the Camera. (set in myconfig.h)
 #if defined(CAM_NAME)
@@ -684,6 +689,9 @@ void setup() {
 
     // Now we have a network we can start the two http handlers for the UI and Stream.
     startCameraServer(httpPort, streamPort);
+    // Start WebSocket server and assign callback
+    webSocket.begin();
+    webSocket.onEvent(onWebSocketEvent);
 
     #if defined(URL_HOSTNAME)
         if (httpPort != 80) {
@@ -731,6 +739,64 @@ void setup() {
     Serial.print("\r\nThis is the 4.0 alpha\r\n - Face detection has been removed!\r\n");
 }
 
+// Callback: receiving any WebSocket message
+void onWebSocketEvent(uint8_t client_num,
+                      WStype_t type,
+                      uint8_t * payload,
+                      size_t length) {
+
+  // Figure out the type of WebSocket event
+  switch(type) {
+
+    // Client has disconnected
+    case WStype_DISCONNECTED:
+      Serial.printf("[%u] Disconnected!\n", client_num);
+      break;
+
+    // New client has connected
+    case WStype_CONNECTED:
+      {
+        IPAddress ip = webSocket.remoteIP(client_num);
+        Serial.printf("[%u] Connection from ", client_num);
+        Serial.println(ip.toString());
+      }
+      break;
+
+    // Handle text messages from client
+    case WStype_TEXT:
+
+      // Print out raw message
+      Serial.printf("[%u] Received text: %s\n", client_num, payload);
+
+      // Toggle LED
+      if ( strcmp((char *)payload, "toggletestVarState") == 0 ) {
+        testVarState = testVarState ? 0 : 1;
+        Serial.printf("Toggling testVarState to %u\n", testVarState);
+        
+      // Report the state of the LED
+      } else if ( strcmp((char *)payload, "gettestVarState") == 0 ) {
+        sprintf(msg_buf, "%d", testVarState);
+        Serial.printf("Sending to [%u]: %s\n", client_num, msg_buf);
+        webSocket.sendTXT(client_num, msg_buf);
+
+      // Message not recognized
+      } else {
+        Serial.printf("[%u] No command matched the input\n", client_num);
+      }
+      break;
+
+    // For everything else: do nothing
+    case WStype_BIN:
+    case WStype_ERROR:
+    case WStype_FRAGMENT_TEXT_START:
+    case WStype_FRAGMENT_BIN_START:
+    case WStype_FRAGMENT:
+    case WStype_FRAGMENT_FIN:
+    default:
+      break;
+  }
+}
+
 void loop() {
     /* 
      *  Just loop forever, reconnecting Wifi As necesscary in client mode
@@ -763,6 +829,24 @@ void loop() {
                 delay(100);
                 if (otaEnabled) ArduinoOTA.handle();
                 handleSerial();
+
+                webSocket.loop();
+
+                // // TODO: Move the websocket handling somewhere else
+                // websockets::WebsocketsClient webSocketClient = webSocketServer.accept();
+                // if(webSocketClient.available()) {
+                //     websockets::WebsocketsMessage msg = webSocketClient.readBlocking();
+
+                //     // log
+                //     Serial.print("Got Message: ");
+                //     Serial.println(msg.data());
+
+                //     // return echo
+                //     webSocketClient.send("Echo: " + msg.data());
+
+                //     // close the connection
+                //     webSocketClient.close();
+                // }
             }
         } else {
             // disconnected; attempt to reconnect

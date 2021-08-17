@@ -67,10 +67,10 @@ typedef struct {
         size_t len;
 } jpg_chunking_t;
 
-#define PART_BOUNDARY "123456789000000000000987654321"
-static const char* _STREAM_CONTENT_TYPE = "multipart/x-mixed-replace;boundary=" PART_BOUNDARY;
-static const char* _STREAM_BOUNDARY = "\r\n--" PART_BOUNDARY "\r\n";
-static const char* _STREAM_PART = "Content-Type: image/jpeg\r\nContent-Length: %u\r\n\r\n";
+// #define PART_BOUNDARY "123456789000000000000987654321"
+// static const char* _STREAM_CONTENT_TYPE = "multipart/x-mixed-replace;boundary=" PART_BOUNDARY;
+// static const char* _STREAM_BOUNDARY = "\r\n--" PART_BOUNDARY "\r\n";
+// static const char* _STREAM_PART = "Content-Type: image/jpeg\r\nContent-Length: %u\r\n\r\n";
 
 httpd_handle_t stream_httpd = NULL;
 httpd_handle_t camera_httpd = NULL;
@@ -191,94 +191,94 @@ static esp_err_t capture_handler(httpd_req_t *req){
     return res;
 }
 
-static esp_err_t stream_handler(httpd_req_t *req){
-    camera_fb_t * fb = NULL;
-    esp_err_t res = ESP_OK;
-    size_t _jpg_buf_len = 0;
-    uint8_t * _jpg_buf = NULL;
-    char * part_buf[64];
+// static esp_err_t stream_handler(httpd_req_t *req){
+//     camera_fb_t * fb = NULL;
+//     esp_err_t res = ESP_OK;
+//     size_t _jpg_buf_len = 0;
+//     uint8_t * _jpg_buf = NULL;
+//     char * part_buf[64];
 
-    Serial.println("Stream requested");
-    if (autoLamp && (lampVal != -1)) setLamp(lampVal);
-    streamCount = 1;  // at present we only have one stream handler, so values are 0 or 1..
-    flashLED(75);     // double flash of status LED
-    delay(75);
-    flashLED(75);
+//     Serial.println("Stream requested");
+//     if (autoLamp && (lampVal != -1)) setLamp(lampVal);
+//     streamCount = 1;  // at present we only have one stream handler, so values are 0 or 1..
+//     flashLED(75);     // double flash of status LED
+//     delay(75);
+//     flashLED(75);
 
-    static int64_t last_frame = 0;
-    if(!last_frame) {
-        last_frame = esp_timer_get_time();
-    }
+//     static int64_t last_frame = 0;
+//     if(!last_frame) {
+//         last_frame = esp_timer_get_time();
+//     }
 
-    res = httpd_resp_set_type(req, _STREAM_CONTENT_TYPE);
-    if(res != ESP_OK){
-        streamCount = 0;
-        if (autoLamp && (lampVal != -1)) setLamp(0);
-        Serial.println("STREAM: failed to set HTTP response type");
-        return res;
-    }
+//     res = httpd_resp_set_type(req, _STREAM_CONTENT_TYPE);
+//     if(res != ESP_OK){
+//         streamCount = 0;
+//         if (autoLamp && (lampVal != -1)) setLamp(0);
+//         Serial.println("STREAM: failed to set HTTP response type");
+//         return res;
+//     }
 
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+//     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
 
-    while(true){
-        fb = esp_camera_fb_get();
-        if (!fb) {
-            Serial.println("STREAM: failed to acquire frame");
-            res = ESP_FAIL;
-        } else {
-            if(fb->format != PIXFORMAT_JPEG){
-                bool jpeg_converted = frame2jpg(fb, 80, &_jpg_buf, &_jpg_buf_len);
-                esp_camera_fb_return(fb);
-                fb = NULL;
-                if(!jpeg_converted){
-                    Serial.println("STREAM: JPEG compression failed");
-                    res = ESP_FAIL;
-                }
-            } else {
-                _jpg_buf_len = fb->len;
-                _jpg_buf = fb->buf;
-            }
-        }
-        if(res == ESP_OK){
-            res = httpd_resp_send_chunk(req, _STREAM_BOUNDARY, strlen(_STREAM_BOUNDARY));
-        }
-        if(res == ESP_OK){
-            size_t hlen = snprintf((char *)part_buf, 64, _STREAM_PART, _jpg_buf_len);
-            res = httpd_resp_send_chunk(req, (const char *)part_buf, hlen);
-        }
-        if(res == ESP_OK){
-            res = httpd_resp_send_chunk(req, (const char *)_jpg_buf, _jpg_buf_len);
-        }
-        if(fb){
-            esp_camera_fb_return(fb);
-            fb = NULL;
-            _jpg_buf = NULL;
-        } else if(_jpg_buf){
-            free(_jpg_buf);
-            _jpg_buf = NULL;
-        }
-        if(res != ESP_OK){
-            // This is the only exit point from the stream loop.
-            // We end the stream here only if a Hard failure has been encountered or the connection has been interrupted.
-            break;
-        }
-        int64_t frame_time = esp_timer_get_time() - last_frame;
-        last_frame = esp_timer_get_time();;
-        frame_time /= 1000;
-        if (debugData) {
-            Serial.printf("MJPG: %uB %ums (%.1ffps)\r\n",
-                (uint32_t)(_jpg_buf_len),
-                (uint32_t)frame_time, 1000.0 / (uint32_t)frame_time);
-        }
-    }
+//     while(true){
+//         fb = esp_camera_fb_get();
+//         if (!fb) {
+//             Serial.println("STREAM: failed to acquire frame");
+//             res = ESP_FAIL;
+//         } else {
+//             if(fb->format != PIXFORMAT_JPEG){
+//                 bool jpeg_converted = frame2jpg(fb, 80, &_jpg_buf, &_jpg_buf_len);
+//                 esp_camera_fb_return(fb);
+//                 fb = NULL;
+//                 if(!jpeg_converted){
+//                     Serial.println("STREAM: JPEG compression failed");
+//                     res = ESP_FAIL;
+//                 }
+//             } else {
+//                 _jpg_buf_len = fb->len;
+//                 _jpg_buf = fb->buf;
+//             }
+//         }
+//         if(res == ESP_OK){
+//             res = httpd_resp_send_chunk(req, _STREAM_BOUNDARY, strlen(_STREAM_BOUNDARY));
+//         }
+//         if(res == ESP_OK){
+//             size_t hlen = snprintf((char *)part_buf, 64, _STREAM_PART, _jpg_buf_len);
+//             res = httpd_resp_send_chunk(req, (const char *)part_buf, hlen);
+//         }
+//         if(res == ESP_OK){
+//             res = httpd_resp_send_chunk(req, (const char *)_jpg_buf, _jpg_buf_len);
+//         }
+//         if(fb){
+//             esp_camera_fb_return(fb);
+//             fb = NULL;
+//             _jpg_buf = NULL;
+//         } else if(_jpg_buf){
+//             free(_jpg_buf);
+//             _jpg_buf = NULL;
+//         }
+//         if(res != ESP_OK){
+//             // This is the only exit point from the stream loop.
+//             // We end the stream here only if a Hard failure has been encountered or the connection has been interrupted.
+//             break;
+//         }
+//         int64_t frame_time = esp_timer_get_time() - last_frame;
+//         last_frame = esp_timer_get_time();;
+//         frame_time /= 1000;
+//         if (debugData) {
+//             Serial.printf("MJPG: %uB %ums (%.1ffps)\r\n",
+//                 (uint32_t)(_jpg_buf_len),
+//                 (uint32_t)frame_time, 1000.0 / (uint32_t)frame_time);
+//         }
+//     }
 
-    streamsServed++;
-    streamCount = 0;
-    if (autoLamp && (lampVal != -1)) setLamp(0);
-    Serial.println("Stream ended");
-    last_frame = 0;
-    return res;
-}
+//     streamsServed++;
+//     streamCount = 0;
+//     if (autoLamp && (lampVal != -1)) setLamp(0);
+//     Serial.println("Stream ended");
+//     last_frame = 0;
+//     return res;
+// }
 
 static esp_err_t cmd_handler(httpd_req_t *req){
     char*  buf;
@@ -471,19 +471,19 @@ static esp_err_t status_handler(httpd_req_t *req){
     return httpd_resp_send(req, json_response, strlen(json_response));
 }
 
-static esp_err_t info_handler(httpd_req_t *req){
-    static char json_response[256];
-    char * p = json_response;
-    *p++ = '{';
-    p+=sprintf(p, "\"cam_name\":\"%s\",", myName);
-    p+=sprintf(p, "\"rotate\":\"%d\",", myRotation);
-    p+=sprintf(p, "\"stream_url\":\"%s\"", streamURL);
-    *p++ = '}';
-    *p++ = 0;
-    httpd_resp_set_type(req, "application/json");
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
-    return httpd_resp_send(req, json_response, strlen(json_response));
-}
+// static esp_err_t info_handler(httpd_req_t *req){
+//     static char json_response[256];
+//     char * p = json_response;
+//     *p++ = '{';
+//     p+=sprintf(p, "\"cam_name\":\"%s\",", myName);
+//     p+=sprintf(p, "\"rotate\":\"%d\",", myRotation);
+//     p+=sprintf(p, "\"stream_url\":\"%s\"", streamURL);
+//     *p++ = '}';
+//     *p++ = 0;
+//     httpd_resp_set_type(req, "application/json");
+//     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+//     return httpd_resp_send(req, json_response, strlen(json_response));
+// }
 
 static esp_err_t favicon_16x16_handler(httpd_req_t *req){
     httpd_resp_set_type(req, "image/png");
@@ -508,6 +508,55 @@ static esp_err_t logo_svg_handler(httpd_req_t *req){
     httpd_resp_set_hdr(req, "Content-Encoding", "identity");
     return httpd_resp_send(req, (const char *)logo_svg, logo_svg_len);
 }
+
+// static esp_err_t echo_handler(httpd_req_t *req)
+// {
+//     if (req->method == HTTP_GET) {
+//         ESP_LOGI(TAG, "Handshake done, the new connection was opened");
+//         return ESP_OK;
+//     }
+//     httpd_ws_frame_t ws_pkt;
+//     uint8_t *buf = NULL;
+//     memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
+//     ws_pkt.type = HTTPD_WS_TYPE_TEXT;
+//     /* Set max_len = 0 to get the frame len */
+//     esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
+//     if (ret != ESP_OK) {
+//         ESP_LOGE(TAG, "httpd_ws_recv_frame failed to get frame len with %d", ret);
+//         return ret;
+//     }
+//     ESP_LOGI(TAG, "frame len is %d", ws_pkt.len);
+//     if (ws_pkt.len) {
+//         /* ws_pkt.len + 1 is for NULL termination as we are expecting a string */
+//         buf = calloc(1, ws_pkt.len + 1);
+//         if (buf == NULL) {
+//             ESP_LOGE(TAG, "Failed to calloc memory for buf");
+//             return ESP_ERR_NO_MEM;
+//         }
+//         ws_pkt.payload = buf;
+//         /* Set max_len = ws_pkt.len to get the frame payload */
+//         ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
+//         if (ret != ESP_OK) {
+//             ESP_LOGE(TAG, "httpd_ws_recv_frame failed with %d", ret);
+//             free(buf);
+//             return ret;
+//         }
+//         ESP_LOGI(TAG, "Got packet with message: %s", ws_pkt.payload);
+//     }
+//     ESP_LOGI(TAG, "Packet type: %d", ws_pkt.type);
+//     if (ws_pkt.type == HTTPD_WS_TYPE_TEXT &&
+//         strcmp((char*)ws_pkt.payload,"Trigger async") == 0) {
+//         free(buf);
+//         return trigger_async_send(req->handle, req);
+//     }
+
+//     ret = httpd_ws_send_frame(req, &ws_pkt);
+//     if (ret != ESP_OK) {
+//         ESP_LOGE(TAG, "httpd_ws_send_frame failed with %d", ret);
+//     }
+//     free(buf);
+//     return ret;
+// }
 
 static esp_err_t dump_handler(httpd_req_t *req){
     flashLED(75);
@@ -609,13 +658,13 @@ static esp_err_t style_handler(httpd_req_t *req){
     return httpd_resp_send(req, (const char *)style_css, style_css_len);
 }
 
-static esp_err_t streamviewer_handler(httpd_req_t *req){
-    flashLED(75);
-    Serial.println("Stream Viewer requested");
-    httpd_resp_set_type(req, "text/html");
-    httpd_resp_set_hdr(req, "Content-Encoding", "identity");
-    return httpd_resp_send(req, (const char *)streamviewer_html, streamviewer_html_len);
-}
+// static esp_err_t streamviewer_handler(httpd_req_t *req){
+//     flashLED(75);
+//     Serial.println("Stream Viewer requested");
+//     httpd_resp_set_type(req, "text/html");
+//     httpd_resp_set_hdr(req, "Content-Encoding", "identity");
+//     return httpd_resp_send(req, (const char *)streamviewer_html, streamviewer_html_len);
+// }
 
 static esp_err_t error_handler(httpd_req_t *req){
     flashLED(75);
@@ -769,36 +818,36 @@ void startCameraServer(int hPort, int sPort){
         .handler   = dump_handler,
         .user_ctx  = NULL
     };
-    httpd_uri_t stream_uri = {
-        .uri       = "/",
-        .method    = HTTP_GET,
-        .handler   = stream_handler,
-        .user_ctx  = NULL
-    };
-    httpd_uri_t streamviewer_uri = {
-        .uri       = "/view",
-        .method    = HTTP_GET,
-        .handler   = streamviewer_handler,
-        .user_ctx  = NULL
-    };
-    httpd_uri_t info_uri = {
-        .uri       = "/info",
-        .method    = HTTP_GET,
-        .handler   = info_handler,
-        .user_ctx  = NULL
-    };
+    // httpd_uri_t stream_uri = {
+    //     .uri       = "/",
+    //     .method    = HTTP_GET,
+    //     .handler   = stream_handler,
+    //     .user_ctx  = NULL
+    // };
+    // httpd_uri_t streamviewer_uri = {
+    //     .uri       = "/view",
+    //     .method    = HTTP_GET,
+    //     .handler   = streamviewer_handler,
+    //     .user_ctx  = NULL
+    // };
+    // httpd_uri_t info_uri = {
+    //     .uri       = "/info",
+    //     .method    = HTTP_GET,
+    //     .handler   = info_handler,
+    //     .user_ctx  = NULL
+    // };
     httpd_uri_t error_uri = {
         .uri       = "/",
         .method    = HTTP_GET,
         .handler   = error_handler,
         .user_ctx  = NULL
     };
-    httpd_uri_t viewerror_uri = {
-        .uri       = "/view",
-        .method    = HTTP_GET,
-        .handler   = error_handler,
-        .user_ctx  = NULL
-    };
+    // httpd_uri_t viewerror_uri = {
+    //     .uri       = "/view",
+    //     .method    = HTTP_GET,
+    //     .handler   = error_handler,
+    //     .user_ctx  = NULL
+    // };
 
     // Request Handlers; config.max_uri_handlers (above) must be >= the number of handlers
     config.server_port = hPort;
@@ -819,22 +868,23 @@ void startCameraServer(int hPort, int sPort){
         httpd_register_uri_handler(camera_httpd, &favicon_ico_uri);
         httpd_register_uri_handler(camera_httpd, &logo_svg_uri);
         httpd_register_uri_handler(camera_httpd, &dump_uri);
+        // httpd_register_uri_handler(camera_httpd, &ws_uri);
     }
 
-    config.server_port = sPort;
-    config.ctrl_port = sPort;
-    Serial.printf("Starting stream server on port: '%d'\r\n", config.server_port);
-    if (httpd_start(&stream_httpd, &config) == ESP_OK) {
-        if (critERR.length() > 0) {
-            httpd_register_uri_handler(camera_httpd, &error_uri);
-            httpd_register_uri_handler(camera_httpd, &viewerror_uri);
-        } else {
-            httpd_register_uri_handler(stream_httpd, &stream_uri);
-            httpd_register_uri_handler(stream_httpd, &info_uri);
-            httpd_register_uri_handler(stream_httpd, &streamviewer_uri);
-        }
-        httpd_register_uri_handler(stream_httpd, &favicon_16x16_uri);
-        httpd_register_uri_handler(stream_httpd, &favicon_32x32_uri);
-        httpd_register_uri_handler(stream_httpd, &favicon_ico_uri);
-    }
+    // config.server_port = sPort;
+    // config.ctrl_port = sPort;
+    // Serial.printf("Starting stream server on port: '%d'\r\n", config.server_port);
+    // if (httpd_start(&stream_httpd, &config) == ESP_OK) {
+    //     if (critERR.length() > 0) {
+    //         httpd_register_uri_handler(camera_httpd, &error_uri);
+    //         httpd_register_uri_handler(camera_httpd, &viewerror_uri);
+    //     } else {
+    //         httpd_register_uri_handler(stream_httpd, &stream_uri);
+    //         httpd_register_uri_handler(stream_httpd, &info_uri);
+    //         httpd_register_uri_handler(stream_httpd, &streamviewer_uri);
+    //     }
+    //     httpd_register_uri_handler(stream_httpd, &favicon_16x16_uri);
+    //     httpd_register_uri_handler(stream_httpd, &favicon_32x32_uri);
+    //     httpd_register_uri_handler(stream_httpd, &favicon_ico_uri);
+    // }
 }
