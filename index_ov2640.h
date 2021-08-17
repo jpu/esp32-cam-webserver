@@ -260,10 +260,12 @@ const uint8_t index_ov2640_html[] = R"=====(<!doctype html>
               </div>
             </nav>
         </div>
-        <figure>
+        <figure class="full_width">
           <div id="stream-container" class="image-container hidden">
             <div class="close close-rot-none" id="close-stream">×</div>
-            <img id="stream" src="">
+            <div id="stream-crop">
+              <img id="stream" src="">
+            </div>
           </div>
         </figure>
       </div>

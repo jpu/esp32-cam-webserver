@@ -285,6 +285,21 @@ static esp_err_t cmd_handler(httpd_req_t *req){
     size_t buf_len;
     char variable[32] = {0,};
     char value[32] = {0,};
+
+    // raw window params
+    char p_res_raw_offset_x[8] = {0,};
+    char p_res_raw_offset_y[8] = {0,};
+    char p_res_raw_total_x[8] = {0,};
+    char p_res_raw_total_y[8] = {0,};
+    char p_res_raw_width[8] = {0,};
+    char p_res_raw_height[8] = {0,};
+    int res_raw_offset_x = 0;
+    int res_raw_offset_y = 0;
+    int res_raw_total_x = 0;
+    int res_raw_total_y = 0;
+    int res_raw_width = 0;
+    int res_raw_height = 0;
+
     flashLED(75);
 
     buf_len = httpd_req_get_url_query_len(req) + 1;
@@ -297,6 +312,26 @@ static esp_err_t cmd_handler(httpd_req_t *req){
         if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
             if (httpd_query_key_value(buf, "var", variable, sizeof(variable)) == ESP_OK &&
                 httpd_query_key_value(buf, "val", value, sizeof(value)) == ESP_OK) {
+                    if(!strcmp(variable, "res_raw")){
+                        // example: GET /control?var=res_raw&val=1&offset_x=254&offset_y=250&total_x=960&total_y=256&raw_width=512&raw_height=128
+                        if (httpd_query_key_value(buf, "offset_x", p_res_raw_offset_x, sizeof(p_res_raw_offset_x)) == ESP_OK &&
+                            httpd_query_key_value(buf, "offset_y", p_res_raw_offset_y, sizeof(p_res_raw_offset_y)) == ESP_OK &&
+                            httpd_query_key_value(buf, "total_x", p_res_raw_total_x, sizeof(p_res_raw_total_x)) == ESP_OK &&
+                            httpd_query_key_value(buf, "total_y", p_res_raw_total_y, sizeof(p_res_raw_total_y)) == ESP_OK &&
+                            httpd_query_key_value(buf, "raw_width", p_res_raw_width, sizeof(p_res_raw_width)) == ESP_OK &&
+                            httpd_query_key_value(buf, "raw_height", p_res_raw_height, sizeof(p_res_raw_height)) == ESP_OK) {
+                                res_raw_offset_x = atoi(p_res_raw_offset_x);
+                                res_raw_offset_y = atoi(p_res_raw_offset_y);
+                                res_raw_total_x = atoi(p_res_raw_total_x);
+                                res_raw_total_y = atoi(p_res_raw_total_y);
+                                res_raw_width = atoi(p_res_raw_width);
+                                res_raw_height = atoi(p_res_raw_height);
+                        }else {
+                            free(buf);
+                            httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Error in res_raw parameters");
+                            return ESP_FAIL;
+                        }
+                    }
             } else {
                 free(buf);
                 httpd_resp_send_404(req);
@@ -316,6 +351,7 @@ static esp_err_t cmd_handler(httpd_req_t *req){
     int val = atoi(value);
     sensor_t * s = esp_camera_sensor_get();
     int res = 0;
+    int unused = 0;
     if(!strcmp(variable, "framesize")) {
         if(s->pixformat == PIXFORMAT_JPEG) res = s->set_framesize(s, (framesize_t)val);
     }
@@ -330,6 +366,7 @@ static esp_err_t cmd_handler(httpd_req_t *req){
     else if(!strcmp(variable, "aec")) res = s->set_exposure_ctrl(s, val);
     else if(!strcmp(variable, "hmirror")) res = s->set_hmirror(s, val);
     else if(!strcmp(variable, "vflip")) res = s->set_vflip(s, val);
+    else if(!strcmp(variable, "res_raw")) res = s->set_res_raw(s, FRAMESIZE_SVGA, unused, unused, unused, res_raw_offset_x, res_raw_offset_y, res_raw_total_x, res_raw_total_y, res_raw_width, res_raw_height, unused, unused);
     else if(!strcmp(variable, "awb_gain")) res = s->set_awb_gain(s, val);
     else if(!strcmp(variable, "agc_gain")) res = s->set_agc_gain(s, val);
     else if(!strcmp(variable, "aec_value")) res = s->set_aec_value(s, val);

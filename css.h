@@ -56,6 +56,10 @@ figure {
   margin-inline-end: 0
 }
 
+figure.full_width {
+  width: 100%;
+}
+
 figure img {
   display: block;
   max-width: 100%;
